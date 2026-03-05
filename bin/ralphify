@@ -1,0 +1,218 @@
+#!/bin/bash
+# ralphify – Install Ralph Wiggum into a project (enables the Ralph loop)
+#
+# Usage:
+#   ralphify                  # Install into current directory
+#   ralphify /path/to/project # Install into the given project
+#
+# Uses scripts from this repo (no download). Make this command available by
+# adding the repo's bin to your PATH, e.g. in ~/.zshrc:
+#   export PATH="/path/to/ralph-wiggum-cursor/bin:$PATH"
+
+set -euo pipefail
+
+# Repo root: assume this script lives at <repo>/bin/ralphify
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+[[ -z "$SCRIPT_PATH" ]] && SCRIPT_PATH="$0"
+REPO_ROOT="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+SCRIPTS_SRC="$REPO_ROOT/scripts"
+
+# Default target: current directory
+TARGET="${1:-.}"
+if [[ "$TARGET" == "-h" ]] || [[ "$TARGET" == "--help" ]]; then
+  echo "ralphify – Install Ralph Wiggum into a project"
+  echo ""
+  echo "Usage: ralphify [TARGET_DIR]"
+  echo ""
+  echo "  TARGET_DIR  Directory to install into (default: current directory)"
+  echo ""
+  echo "To make 'ralphify' available in your shell, add to ~/.zshrc:"
+  echo "  export PATH=\"$REPO_ROOT/bin:\$PATH\""
+  exit 0
+fi
+
+# Resolve target to absolute path
+TARGET="$(cd "$TARGET" && pwd)"
+
+echo "═══════════════════════════════════════════════════════════════════"
+echo "🐛 ralphify – Enabling Ralph Wiggum in: $TARGET"
+echo "═══════════════════════════════════════════════════════════════════"
+echo ""
+
+# Checks (warnings only)
+if ! git -C "$TARGET" rev-parse --git-dir > /dev/null 2>&1; then
+  echo "⚠️  Not a git repository. Ralph works best with git."
+  echo "   Run: git init"
+  echo ""
+fi
+if ! command -v cursor-agent &> /dev/null; then
+  echo "⚠️  cursor-agent CLI not found."
+  echo "   Install: curl https://cursor.com/install -fsS | bash"
+  echo ""
+fi
+
+# Create directories
+echo "📁 Creating directories..."
+mkdir -p "$TARGET/.cursor/ralph-scripts"
+mkdir -p "$TARGET/.ralph"
+
+# Copy scripts from repo (local, no download)
+echo "📥 Installing Ralph scripts (from repo)..."
+for script in ralph-common.sh ralph-setup.sh ralph-loop.sh ralph-once.sh \
+             ralph-parallel.sh stream-parser.sh task-parser.sh ralph-retry.sh init-ralph.sh; do
+  if [[ -f "$SCRIPTS_SRC/$script" ]]; then
+    cp "$SCRIPTS_SRC/$script" "$TARGET/.cursor/ralph-scripts/$script"
+    chmod +x "$TARGET/.cursor/ralph-scripts/$script"
+  else
+    echo "   ⚠️  Missing: $script"
+  fi
+done
+echo "✓ Scripts installed to $TARGET/.cursor/ralph-scripts/"
+
+# Initialize .ralph state
+echo "📁 Initializing .ralph/ state..."
+cat > "$TARGET/.ralph/guardrails.md" << 'EOF'
+# Ralph Guardrails (Signs)
+
+> Lessons learned from past failures. READ THESE BEFORE ACTING.
+
+## Core Signs
+
+### Sign: Read Before Writing
+- **Trigger**: Before modifying any file
+- **Instruction**: Always read the existing file first
+- **Added after**: Core principle
+
+### Sign: Test After Changes
+- **Trigger**: After any code change
+- **Instruction**: Run tests to verify nothing broke
+- **Added after**: Core principle
+
+### Sign: Commit Checkpoints
+- **Trigger**: Before risky changes
+- **Instruction**: Commit current working state first
+- **Added after**: Core principle
+
+---
+
+## Learned Signs
+
+(Signs added from observed failures will appear below)
+
+EOF
+
+cat > "$TARGET/.ralph/progress.md" << 'EOF'
+# Progress Log
+
+> Updated by the agent after significant work.
+
+## Summary
+
+- Iterations completed: 0
+- Current status: Initialized
+
+## How This Works
+
+Progress is tracked in THIS FILE, not in LLM context.
+When context is rotated (fresh agent), the new agent reads this file.
+This is how Ralph maintains continuity across iterations.
+
+## Session History
+
+EOF
+
+cat > "$TARGET/.ralph/errors.log" << 'EOF'
+# Error Log
+
+> Failures detected by stream-parser. Use to update guardrails.
+
+EOF
+
+cat > "$TARGET/.ralph/activity.log" << 'EOF'
+# Activity Log
+
+> Real-time tool call logging from stream-parser.
+
+EOF
+
+echo "0" > "$TARGET/.ralph/.iteration"
+echo "✓ .ralph/ initialized"
+
+# Optional: RALPH_TASK.md template
+if [[ ! -f "$TARGET/RALPH_TASK.md" ]]; then
+  echo "📝 Creating RALPH_TASK.md template..."
+  cat > "$TARGET/RALPH_TASK.md" <<'TASKEOF'
+---
+task: Build a CLI todo app in TypeScript
+test_command: "npx ts-node todo.ts list"
+---
+
+# Task: CLI Todo App (TypeScript)
+
+Build a simple command-line todo application in TypeScript.
+
+## Requirements
+
+1. Single file: `todo.ts`
+2. Uses `todos.json` for persistence
+3. Three commands: add, list, done
+4. TypeScript with proper types
+
+## Success Criteria
+
+1. [ ] `npx ts-node todo.ts add "Buy milk"` adds a todo and confirms
+2. [ ] `npx ts-node todo.ts list` shows all todos with IDs and status
+3. [ ] `npx ts-node todo.ts done 1` marks todo 1 as complete
+4. [ ] Todos survive script restart (JSON persistence)
+5. [ ] Invalid commands show helpful usage message
+6. [ ] Code has proper TypeScript types (no `any`)
+
+---
+
+## Ralph Instructions
+
+1. Work on the next incomplete criterion (marked [ ])
+2. Check off completed criteria (change [ ] to [x])
+3. Run tests after changes
+4. Commit your changes frequently
+5. When ALL criteria are [x], output: `<ralph>COMPLETE</ralph>`
+6. If stuck on the same issue 3+ times, output: `<ralph>GUTTER</ralph>`
+TASKEOF
+  echo "✓ Created RALPH_TASK.md with example task"
+else
+  echo "✓ RALPH_TASK.md already exists (not overwritten)"
+fi
+
+# Update .gitignore
+if [[ -f "$TARGET/.gitignore" ]]; then
+  if ! grep -q "ralph-config.json" "$TARGET/.gitignore" 2>/dev/null; then
+    echo "" >> "$TARGET/.gitignore"
+    echo "# Ralph config (may contain API key)" >> "$TARGET/.gitignore"
+    echo ".cursor/ralph-config.json" >> "$TARGET/.gitignore"
+  fi
+else
+  cat > "$TARGET/.gitignore" <<'EOF'
+# Ralph config (may contain API key)
+.cursor/ralph-config.json
+EOF
+fi
+echo "✓ Updated .gitignore"
+
+# Summary
+echo ""
+echo "═══════════════════════════════════════════════════════════════════"
+echo "✅ Ralph enabled! You can run the loop from: $TARGET"
+echo "═══════════════════════════════════════════════════════════════════"
+echo ""
+echo "  📁 .cursor/ralph-scripts/   – Ralph scripts"
+echo "  📁 .ralph/                 – State (guardrails, progress, logs)"
+echo "  📄 RALPH_TASK.md           – Define your task and criteria"
+echo ""
+echo "Next steps:"
+echo "  1. Edit RALPH_TASK.md with your task and criteria"
+echo "  2. Run: $TARGET/.cursor/ralph-scripts/ralph-setup.sh"
+echo "     or:  cd $TARGET && ./.cursor/ralph-scripts/ralph-setup.sh"
+echo ""
+echo "  Single iteration first:  ./.cursor/ralph-scripts/ralph-once.sh"
+echo "  Monitor:                 tail -f .ralph/activity.log"
+echo ""

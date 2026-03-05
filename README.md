@@ -88,10 +88,31 @@ This creates two problems:
 
 ### 1. Install Ralph
 
+**Option A – One-liner (downloads scripts from GitHub):**
+
 ```bash
 cd your-project
 curl -fsSL https://raw.githubusercontent.com/agrimsingh/ralph-wiggum-cursor/main/install.sh | bash
 ```
+
+**Option B – Local `ralphify` command (uses this repo’s scripts, no download):**
+
+If you have this repo cloned, you can use the `ralphify` command to enable Ralph in any project:
+
+1. Add the repo’s `bin` to your PATH (e.g. in `~/.zshrc`):
+
+   ```bash
+   export PATH="/path/to/ralph-wiggum-cursor/bin:$PATH"
+   ```
+
+2. From any directory, run:
+
+   ```bash
+   ralphify                  # enable Ralph in current directory
+   ralphify /path/to/project # enable Ralph in another project
+   ```
+
+   This copies scripts from the repo and creates `.cursor/ralph-scripts/`, `.ralph/`, and optional `RALPH_TASK.md` in the target project.
 
 This creates:
 ```
