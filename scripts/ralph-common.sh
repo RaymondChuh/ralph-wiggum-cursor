@@ -549,12 +549,12 @@ run_iteration() {
   # Log session start to progress.md
   log_progress "$workspace" "**Session $iteration started** (model: $MODEL)"
   
-  # Build cursor-agent command
-  local cmd="cursor-agent -p --force --output-format stream-json --model $MODEL"
+  # Build cursor-agent command as an array to preserve special characters in the prompt
+  local cmd_args=(cursor-agent -p --force --output-format stream-json --model "$MODEL")
   
   if [[ -n "$session_id" ]]; then
     echo "Resuming session: $session_id" >&2
-    cmd="$cmd --resume=\"$session_id\""
+    cmd_args+=(--resume="$session_id")
   fi
   
   # Change to workspace
@@ -567,7 +567,7 @@ run_iteration() {
   # Start parser in background, reading from cursor-agent
   # Parser outputs to fifo, we read signals from fifo
   (
-    eval "$cmd \"$prompt\"" 2>&1 | "$script_dir/stream-parser.sh" "$workspace" > "$fifo"
+    "${cmd_args[@]}" "$prompt" 2>&1 | "$script_dir/stream-parser.sh" "$workspace" > "$fifo"
   ) &
   local agent_pid=$!
   
