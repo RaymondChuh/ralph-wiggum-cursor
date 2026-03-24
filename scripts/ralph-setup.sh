@@ -59,18 +59,18 @@ select_model() {
     fi
     echo "$selected"
   else
-    echo ""
-    echo "Select model:"
+    echo "" >&2
+    echo "Select model:" >&2
     local i=1
     for m in "${MODELS[@]}"; do
       if [[ "$m" == "Custom..." ]]; then
-        echo "  $i) Custom (enter manually)"
+        echo "  $i) Custom (enter manually)" >&2
       else
-        echo "  $i) $m"
+        echo "  $i) $m" >&2
       fi
       ((i++))
     done
-    echo ""
+    echo "" >&2
     read -p "Choice [1]: " choice
     choice="${choice:-1}"
     
@@ -115,14 +115,14 @@ select_options() {
     selected=$(gum choose --no-limit --header "Options (space to select, enter to confirm):" "${options[@]}") || true
     echo "$selected"
   else
-    echo ""
-    echo "Options (enter numbers separated by spaces, or press Enter to skip):"
+    echo "" >&2
+    echo "Options (enter numbers separated by spaces, or press Enter to skip):" >&2
     local i=1
     for opt in "${options[@]}"; do
-      echo "  $i) $opt"
+      echo "  $i) $opt" >&2
       ((i++))
     done
-    echo ""
+    echo "" >&2
     read -p "Select options [none]: " choices
     
     local selected=""

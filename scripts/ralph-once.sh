@@ -15,9 +15,8 @@
 #   - If satisfied, run ralph-setup.sh or ralph-loop.sh for full loop
 #
 # Requirements:
-#   - RALPH_TASK.md in the project root
-#   - Git repository
-#   - cursor-agent CLI installed
+#   - Git repository and cursor-agent CLI
+#   - Either a task file (legacy) or the multi-round prompt installed (e.g. via ralphify; no task file needed)
 
 set -euo pipefail
 

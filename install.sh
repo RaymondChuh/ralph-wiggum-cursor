@@ -193,66 +193,8 @@ echo "0" > .ralph/.iteration
 
 echo "✓ .ralph/ initialized"
 
-# =============================================================================
-# CREATE RALPH_TASK.md TEMPLATE
-# =============================================================================
-
-if [[ ! -f "RALPH_TASK.md" ]]; then
-  echo "📝 Creating RALPH_TASK.md template..."
-  cat > RALPH_TASK.md <<'TASKEOF'
----
-task: Build a CLI todo app in TypeScript
-test_command: "npx ts-node todo.ts list"
----
-
-# Task: CLI Todo App (TypeScript)
-
-Build a simple command-line todo application in TypeScript.
-
-## Requirements
-
-1. Single file: `todo.ts`
-2. Uses `todos.json` for persistence
-3. Three commands: add, list, done
-4. TypeScript with proper types
-
-## Success Criteria
-
-1. [ ] `npx ts-node todo.ts add "Buy milk"` adds a todo and confirms
-2. [ ] `npx ts-node todo.ts list` shows all todos with IDs and status
-3. [ ] `npx ts-node todo.ts done 1` marks todo 1 as complete
-4. [ ] Todos survive script restart (JSON persistence)
-5. [ ] Invalid commands show helpful usage message
-6. [ ] Code has proper TypeScript types (no `any`)
-
-## Example Output
-
-```
-$ npx ts-node todo.ts add "Buy milk"
-✓ Added: "Buy milk" (id: 1)
-
-$ npx ts-node todo.ts list
-1. [ ] Buy milk
-
-$ npx ts-node todo.ts done 1
-✓ Completed: "Buy milk"
-```
-
----
-
-## Ralph Instructions
-
-1. Work on the next incomplete criterion (marked [ ])
-2. Check off completed criteria (change [ ] to [x])
-3. Run tests after changes
-4. Commit your changes frequently
-5. When ALL criteria are [x], output: `<ralph>COMPLETE</ralph>`
-6. If stuck on the same issue 3+ times, output: `<ralph>GUTTER</ralph>`
-TASKEOF
-  echo "✓ Created RALPH_TASK.md with example task"
-else
-  echo "✓ RALPH_TASK.md already exists (not overwritten)"
-fi
+# No task file is created by default; agent follows the multi-round prompt (process/ and backlog).
+# A task file can be added for legacy mode if desired.
 
 # =============================================================================
 # UPDATE .gitignore
@@ -281,32 +223,15 @@ echo "════════════════════════�
 echo "✅ Ralph installed!"
 echo "═══════════════════════════════════════════════════════════════════"
 echo ""
-echo "Files created:"
-echo ""
-echo "  📁 .cursor/ralph-scripts/"
-echo "     ├── ralph-setup.sh          - Main entry (interactive)"
-echo "     ├── ralph-loop.sh           - CLI mode (for scripting)"
-echo "     ├── ralph-once.sh           - Single iteration (testing)"
-echo "     └── ...                     - Other utilities"
-echo ""
-echo "  📁 .ralph/                     - State files (tracked in git)"
-echo "     ├── guardrails.md           - Lessons learned"
-echo "     ├── progress.md             - Progress log"
-echo "     ├── activity.log            - Tool call log"
-echo "     └── errors.log              - Failure log"
-echo ""
-echo "  📄 RALPH_TASK.md               - Your task definition (edit this!)"
+echo "  📁 .cursor/ralph-scripts/   – Ralph scripts + multi-round prompt"
+echo "  📁 .ralph/                 – State (guardrails, progress, logs)"
 echo ""
 echo "Next steps:"
-echo "  1. Edit RALPH_TASK.md to define your actual task"
-echo "  2. Run: ./.cursor/ralph-scripts/ralph-setup.sh"
+echo "  1. Run: ./.cursor/ralph-scripts/ralph-setup.sh"
 echo ""
-echo "Alternative commands:"
-echo "  • ralph-once.sh    - Test with single iteration first"
-echo "  • ralph-loop.sh    - CLI mode with flags (for scripting)"
-echo ""
-echo "Monitor progress:"
-echo "  tail -f .ralph/activity.log"
+echo "  The agent follows the multi-round process (process/, product-opportunities)."
+echo "  Single iteration:  ./.cursor/ralph-scripts/ralph-once.sh"
+echo "  Monitor:           tail -f .ralph/activity.log"
 echo ""
 echo "Learn more: https://ghuntley.com/ralph/"
 echo "═══════════════════════════════════════════════════════════════════"
