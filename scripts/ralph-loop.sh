@@ -9,13 +9,13 @@
 # Usage:
 #   ./ralph-loop.sh                              # Start from current directory
 #   ./ralph-loop.sh /path/to/project             # Start from specific project
-#   ./ralph-loop.sh -n 50 -m gpt-5.2-high        # Custom iterations and model
+#   ./ralph-loop.sh -n 50 -m claude-4-sonnet-thinking  # Custom iterations and model
 #   ./ralph-loop.sh --branch feature/foo --pr   # Create branch and PR
 #   ./ralph-loop.sh -y                           # Skip confirmation (for scripting)
 #
 # Flags:
 #   -n, --iterations N     Max iterations (default: 20)
-#   -m, --model MODEL      Model to use (default: opus-4.5-thinking)
+#   -m, --model MODEL      Model to use (default: claude-4.5-opus-high-thinking)
 #   --branch NAME          Sequential: create/work on branch; Parallel: integration branch name
 #   --pr                   Sequential: open PR (requires --branch); Parallel: open ONE integration PR (branch optional)
 #   --parallel             Run tasks in parallel with worktrees
@@ -54,7 +54,7 @@ Usage:
 
 Options:
   -n, --iterations N     Max iterations (default: 20)
-  -m, --model MODEL      Model to use (default: opus-4.5-thinking)
+  -m, --model MODEL      Model to use (default: claude-4.5-opus-high-thinking)
   --branch NAME          Sequential: create/work on branch; Parallel: integration branch name
   --pr                   Sequential: open PR (requires --branch); Parallel: open ONE integration PR (branch optional)
   --parallel             Run tasks in parallel with worktrees
@@ -66,7 +66,7 @@ Options:
 Examples:
   ./ralph-loop.sh                                    # Interactive mode
   ./ralph-loop.sh -n 50                              # 50 iterations max
-  ./ralph-loop.sh -m gpt-5.2-high                    # Use GPT model
+  ./ralph-loop.sh -m claude-4-sonnet-thinking         # Use Sonnet model
   ./ralph-loop.sh --branch feature/api --pr -y      # Scripted PR workflow
   ./ralph-loop.sh --parallel --max-parallel 4        # Run 4 agents in parallel
   

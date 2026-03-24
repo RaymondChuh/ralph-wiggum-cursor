@@ -41,10 +41,9 @@ fi
 
 # Model options
 MODELS=(
-  "opus-4.5-thinking"
-  "sonnet-4.5-thinking"
-  "gpt-5.2-high"
-  "composer-1"
+  "claude-4.5-opus-high-thinking"
+  "claude-4-sonnet-thinking"
+  "gpt-4o"
   "Custom..."
 )
 

@@ -197,15 +197,22 @@ track_file_write() {
   fi
 }
 
-# Process a single JSON line from stream
+# Process a single line from stream (JSON or plain text)
 process_line() {
   local line="$1"
   
   # Skip empty lines
   [[ -z "$line" ]] && return
   
-  # Parse JSON type
-  local type=$(echo "$line" | jq -r '.type // empty' 2>/dev/null) || return
+  # Parse JSON type; if jq fails, the line is not JSON (e.g. a plain-text error from cursor-agent)
+  local type
+  type=$(echo "$line" | jq -r '.type // empty' 2>/dev/null)
+  if [[ $? -ne 0 ]] || [[ -z "$type" ]]; then
+    # Non-JSON output — log it so errors like "Cannot use this model" are visible
+    log_error "cursor-agent: $line"
+    log_activity "⚠️ NON-JSON: $line"
+    return
+  fi
   local subtype=$(echo "$line" | jq -r '.subtype // empty' 2>/dev/null) || true
   
   case "$type" in
