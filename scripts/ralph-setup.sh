@@ -9,9 +9,8 @@
 #   ./ralph-setup.sh /path/to/project   # Run in specific project
 #
 # Requirements:
-#   - RALPH_TASK.md in the project root
-#   - Git repository
-#   - cursor-agent CLI installed
+#   - Git repository and cursor-agent CLI
+#   - Either the multi-round prompt (under .cursor/ralph-scripts/assets/) or a task file in project root
 #   - gum (optional, for enhanced UI): brew install gum
 
 set -euo pipefail
@@ -199,7 +198,24 @@ main() {
   workspace="$(cd "$workspace" && pwd)"
   
   local task_file="$workspace/RALPH_TASK.md"
-  
+  local multi_round_file
+  multi_round_file=$(get_multi_round_file "$SCRIPT_DIR")
+
+  # If multi-round prompt is missing, try to install from repo when ralphify is in PATH (local install)
+  if [[ -z "$multi_round_file" ]] && command -v ralphify &>/dev/null; then
+    local ralphify_path repo_root prompt_basename
+    ralphify_path=$(command -v ralphify)
+    repo_root="$(cd "$(dirname "$(dirname "$ralphify_path")")" && pwd)"
+    prompt_basename="MULTI_ROUND_EXECUTION_AGENT_PROMPT.md"
+    if [[ -f "$repo_root/assets/$prompt_basename" ]]; then
+      mkdir -p "$SCRIPT_DIR/assets"
+      if cp "$repo_root/assets/$prompt_basename" "$SCRIPT_DIR/assets/" 2>/dev/null; then
+        multi_round_file="$SCRIPT_DIR/assets/$prompt_basename"
+        echo "✓ Multi-round prompt installed from repo ($repo_root)"
+      fi
+    fi
+  fi
+
   # Show banner
   echo ""
   show_header "🐛 Ralph Wiggum: Autonomous Development Loop"
@@ -211,38 +227,47 @@ main() {
     echo "  💡 Install gum for a better experience: https://github.com/charmbracelet/gum#installation"
   fi
   echo ""
-  
-  # Check prerequisites
-  if ! check_prerequisites "$workspace"; then
+
+  # Check prerequisites (pass SCRIPT_DIR so multi-round prompt under .cursor/ralph-scripts/assets is found)
+  if ! check_prerequisites "$workspace" "$SCRIPT_DIR"; then
     exit 1
   fi
-  
+
   # Initialize .ralph directory
   init_ralph_dir "$workspace"
+
+  # Refresh multi-round path after possible install
+  multi_round_file=$(get_multi_round_file "$SCRIPT_DIR")
+  local multi_round_mode=false
+  [[ -n "$multi_round_file" ]] && multi_round_mode=true
   
   echo "Workspace: $workspace"
   echo ""
   
-  # Show task summary
-  echo "📋 Task Summary:"
-  echo "─────────────────────────────────────────────────────────────────"
-  head -30 "$task_file"
-  echo "─────────────────────────────────────────────────────────────────"
-  echo ""
-  
-  # Count criteria
-  local total_criteria done_criteria remaining
-  # Only count actual checkbox list items (- [ ], * [x], 1. [ ], etc.)
-  total_criteria=$(grep -cE '^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+\[(x| )\]' "$task_file" 2>/dev/null) || total_criteria=0
-  done_criteria=$(grep -cE '^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+\[x\]' "$task_file" 2>/dev/null) || done_criteria=0
-  remaining=$((total_criteria - done_criteria))
-  
-  echo "Progress: $done_criteria / $total_criteria criteria complete ($remaining remaining)"
-  echo ""
-  
-  if [[ "$remaining" -eq 0 ]] && [[ "$total_criteria" -gt 0 ]]; then
-    echo "🎉 Task already complete! All criteria are checked."
-    exit 0
+  if [[ "$multi_round_mode" == true ]]; then
+    echo "📋 Multi-round execution (process/ and backlog; no task file required)"
+    echo "─────────────────────────────────────────────────────────────────"
+    echo ""
+  else
+    # Show task summary (legacy)
+    echo "📋 Task Summary:"
+    echo "─────────────────────────────────────────────────────────────────"
+    head -30 "$task_file"
+    echo "─────────────────────────────────────────────────────────────────"
+    echo ""
+
+    local total_criteria done_criteria remaining
+    total_criteria=$(grep -cE '^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+\[(x| )\]' "$task_file" 2>/dev/null) || total_criteria=0
+    done_criteria=$(grep -cE '^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+\[x\]' "$task_file" 2>/dev/null) || done_criteria=0
+    remaining=$((total_criteria - done_criteria))
+
+    echo "Progress: $done_criteria / $total_criteria criteria complete ($remaining remaining)"
+    echo ""
+
+    if [[ "$remaining" -eq 0 ]] && [[ "$total_criteria" -gt 0 ]]; then
+      echo "🎉 Task already complete! All criteria are checked."
+      exit 0
+    fi
   fi
   
   # ==========================================================================

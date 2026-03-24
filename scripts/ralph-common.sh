@@ -374,14 +374,58 @@ refresh_task_cache() {
 }
 
 # =============================================================================
+# MULTI-ROUND PROMPT PATH
+# =============================================================================
+
+# Basename of the multi-round prompt asset (no user-facing reference to this name).
+_ralph_multi_round_basename="MULTI_ROUND_EXECUTION_AGENT_PROMPT.md"
+
+# Resolve path to the multi-round prompt file. Echoes path or empty.
+# Checks: script_dir/assets/ (ralphify install) then script_dir/../assets/ (run from repo).
+get_multi_round_file() {
+  local script_dir="${1:-}"
+  [[ -z "$script_dir" ]] && return
+  if [[ -f "$script_dir/assets/$_ralph_multi_round_basename" ]]; then
+    echo "$script_dir/assets/$_ralph_multi_round_basename"
+  elif [[ -f "$script_dir/../assets/$_ralph_multi_round_basename" ]]; then
+    echo "$script_dir/../assets/$_ralph_multi_round_basename"
+  fi
+}
+
+# =============================================================================
 # PROMPT BUILDING
 # =============================================================================
 
-# Build the Ralph prompt for an iteration
+# Build the Ralph prompt for an iteration.
+# When the multi-round prompt is present, task tracking uses process/ and backlog; optional task file can be injected.
 build_prompt() {
   local workspace="$1"
   local iteration="$2"
-  
+  local script_dir="${3:-$_RALPH_SCRIPT_DIR}"
+  local task_file="$workspace/RALPH_TASK.md"
+  local multi_round_file
+  multi_round_file=$(get_multi_round_file "$script_dir")
+
+  if [[ -n "$multi_round_file" ]] && [[ -f "$multi_round_file" ]]; then
+    # Inject "the following user problem": use task file if present, else placeholder.
+    # Format: intro up to "the following user problem:" -> problem content -> "---" -> rest of prompt.
+    local intro_rest
+    intro_rest=$(sed -n '1,/^---$/p' "$multi_round_file" | head -n -1)
+    echo "$intro_rest"
+    echo ""
+    if [[ -f "$task_file" ]]; then
+      cat "$task_file"
+    else
+      echo "Use the \`process/\` folder (ideation, design, PIR) and \`process/pm/product-opportunities.md\` for the current focus and backlog. Create them as needed per the process."
+    fi
+    echo ""
+    echo "---"
+    echo ""
+    sed -n '/^## Process Overview$/,$p' "$multi_round_file"
+    return
+  fi
+
+  # Legacy prompt (when multi-round prompt is not present)
   cat << EOF
 # Ralph Iteration $iteration
 
@@ -390,7 +434,7 @@ You are an autonomous development agent using the Ralph methodology.
 ## FIRST: Read State Files
 
 Before doing anything:
-1. Read \`RALPH_TASK.md\` - your task and completion criteria
+1. Read the task file in the project root (markdown with your task and completion criteria)
 2. Read \`.ralph/guardrails.md\` - lessons from past failures (FOLLOW THESE)
 3. Read \`.ralph/progress.md\` - what's been accomplished
 4. Read \`.ralph/errors.log\` - recent failures to avoid
@@ -421,9 +465,9 @@ If you get rotated, the next agent picks up from your last commit. Your commits 
 
 ## Task Execution
 
-1. Work on the next unchecked criterion in RALPH_TASK.md (look for \`[ ]\`)
-2. Run tests after changes (check RALPH_TASK.md for test_command)
-3. **Mark completed criteria**: Edit RALPH_TASK.md and change \`[ ]\` to \`[x]\`
+1. Work on the next unchecked criterion in the task file (look for \`[ ]\`)
+2. Run tests after changes (check the task file for test_command)
+3. **Mark completed criteria**: Edit the task file and change \`[ ]\` to \`[x]\`
    - Example: \`- [ ] Implement parser\` becomes \`- [x] Implement parser\`
    - This is how progress is tracked - YOU MUST update the file
 4. Update \`.ralph/progress.md\` with what you accomplished
@@ -484,7 +528,7 @@ run_iteration() {
   local session_id="${3:-}"
   local script_dir="${4:-$(dirname "${BASH_SOURCE[0]}")}"
   
-  local prompt=$(build_prompt "$workspace" "$iteration")
+  local prompt=$(build_prompt "$workspace" "$iteration" "$script_dir")
   local fifo="$workspace/.ralph/.parser_fifo"
   
   # Create named pipe for parser signals
@@ -584,11 +628,16 @@ run_iteration() {
 # =============================================================================
 
 # Run the main Ralph loop
-# Args: workspace
+# Args: workspace, script_dir
 # Uses global: MAX_ITERATIONS, MODEL, USE_BRANCH, OPEN_PR
+# When multi-round prompt is used, a task file is optional; completion is by agent signal or max iterations.
 run_ralph_loop() {
   local workspace="$1"
   local script_dir="${2:-$(dirname "${BASH_SOURCE[0]}")}"
+  local multi_round_file
+  multi_round_file=$(get_multi_round_file "$script_dir")
+  local multi_round_mode=false
+  [[ -n "$multi_round_file" ]] && [[ -f "$multi_round_file" ]] && multi_round_mode=true
   
   # Commit any uncommitted work first
   cd "$workspace"
@@ -649,8 +698,8 @@ run_ralph_loop() {
     # Handle signals
     case "$signal" in
       "COMPLETE")
-        # Agent signaled completion - verify with checkbox check
-        if [[ "$task_status" == "COMPLETE" ]]; then
+        # Agent signaled completion. In multi-round mode accept it; otherwise verify with checkbox check.
+        if [[ "$multi_round_mode" == true ]] || [[ "$task_status" == "COMPLETE" ]]; then
           log_progress "$workspace" "**Session $iteration ended** - ✅ TASK COMPLETE (agent signaled)"
           echo ""
           echo "═══════════════════════════════════════════════════════════════════"
@@ -674,7 +723,7 @@ run_ralph_loop() {
           
           return 0
         else
-          # Agent said complete but checkboxes say otherwise - continue
+          # Agent said complete but checkboxes say otherwise (legacy mode) - continue
           log_progress "$workspace" "**Session $iteration ended** - Agent signaled complete but criteria remain"
           echo ""
           echo "⚠️  Agent signaled completion but unchecked criteria remain."
@@ -720,8 +769,13 @@ run_ralph_loop() {
         echo "   Resuming..."
         ;;
       *)
-        # Agent finished naturally, check if more work needed
-        if [[ "$task_status" == INCOMPLETE:* ]]; then
+        # Agent finished naturally. Multi-round: no task file, just continue. Legacy: check remaining criteria.
+        if [[ "$multi_round_mode" == true ]]; then
+          log_progress "$workspace" "**Session $iteration ended** - Agent finished (multi-round)"
+          echo ""
+          echo "📋 Agent finished. Starting next iteration..."
+          iteration=$((iteration + 1))
+        elif [[ "$task_status" == INCOMPLETE:* ]]; then
           local remaining_count=${task_status#INCOMPLETE:}
           log_progress "$workspace" "**Session $iteration ended** - Agent finished naturally ($remaining_count criteria remaining)"
           echo ""
@@ -747,26 +801,27 @@ run_ralph_loop() {
 # PREREQUISITE CHECKS
 # =============================================================================
 
-# Check all prerequisites, exit with error message if any fail
+# Check all prerequisites, exit with error message if any fail.
+# Optional second arg: script_dir. If the multi-round prompt is present, a task file is not required.
 check_prerequisites() {
   local workspace="$1"
+  local script_dir="${2:-}"
   local task_file="$workspace/RALPH_TASK.md"
-  
-  # Check for task file
-  if [[ ! -f "$task_file" ]]; then
-    echo "❌ No RALPH_TASK.md found in $workspace"
+  local multi_round_file
+  multi_round_file=$(get_multi_round_file "$script_dir")
+
+  # Task file required only when multi-round prompt is not available
+  if [[ ! -f "$task_file" ]] && [[ -z "$multi_round_file" ]]; then
+    echo "❌ No task file found in $workspace and multi-round prompt not available."
     echo ""
-    echo "Create a task file first:"
-    echo "  cat > RALPH_TASK.md << 'EOF'"
-    echo "  ---"
-    echo "  task: Your task description"
-    echo "  test_command: \"pnpm test\""
-    echo "  ---"
-    echo "  # Task"
-    echo "  ## Success Criteria"
-    echo "  1. [ ] First thing to do"
-    echo "  2. [ ] Second thing to do"
-    echo "  EOF"
+    echo "The multi-round prompt should be at: $workspace/.cursor/ralph-scripts/assets/"
+    echo ""
+    echo "To fix:"
+    echo "  1. Local install: put ralphify in PATH and run ralph-setup.sh again (it will copy the prompt from the repo)."
+    echo "  2. Or run from repo: ralphify $workspace"
+    echo "  3. Or re-run the online installer from this project root:"
+    echo "       curl -fsSL https://raw.githubusercontent.com/agrimsingh/ralph-wiggum-cursor/main/install.sh | bash"
+    echo "  4. Or create a task file in the project root for legacy mode (see docs for filename)."
     return 1
   fi
   
@@ -797,6 +852,7 @@ check_prerequisites() {
 show_task_summary() {
   local workspace="$1"
   local task_file="$workspace/RALPH_TASK.md"
+  # Task file path is internal; UI shows "task file" only
   
   echo "📋 Task Summary:"
   echo "─────────────────────────────────────────────────────────────────"

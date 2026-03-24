@@ -109,6 +109,15 @@ done
 
 echo "✓ Scripts installed to .cursor/ralph-scripts/"
 
+# Download multi-round prompt so the agent can run without a task file
+mkdir -p .cursor/ralph-scripts/assets
+MULTI_ROUND_PROMPT="MULTI_ROUND_EXECUTION_AGENT_PROMPT.md"
+if curl -fsSL "$REPO_RAW/assets/$MULTI_ROUND_PROMPT" -o ".cursor/ralph-scripts/assets/$MULTI_ROUND_PROMPT" 2>/dev/null; then
+  echo "✓ Multi-round prompt installed (no task file required)"
+else
+  echo "   ⚠️  Could not download multi-round prompt; create a task file in project root for legacy mode"
+fi
+
 
 # =============================================================================
 # INITIALIZE .ralph/ STATE

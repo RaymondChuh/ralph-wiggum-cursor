@@ -54,6 +54,7 @@ fi
 # Create directories
 echo "📁 Creating directories..."
 mkdir -p "$TARGET/.cursor/ralph-scripts"
+mkdir -p "$TARGET/.cursor/ralph-scripts/assets"
 mkdir -p "$TARGET/.ralph"
 
 # Copy scripts from repo (local, no download)
@@ -68,6 +69,16 @@ for script in ralph-common.sh ralph-setup.sh ralph-loop.sh ralph-once.sh \
   fi
 done
 echo "✓ Scripts installed to $TARGET/.cursor/ralph-scripts/"
+
+# Copy multi-round prompt asset (agent uses process/ and backlog; no task file)
+RALPH_MULTI_ROUND_BASENAME="MULTI_ROUND_EXECUTION_AGENT_PROMPT.md"
+ASSETS_SRC="$REPO_ROOT/assets"
+if [[ -f "$ASSETS_SRC/$RALPH_MULTI_ROUND_BASENAME" ]]; then
+  cp "$ASSETS_SRC/$RALPH_MULTI_ROUND_BASENAME" "$TARGET/.cursor/ralph-scripts/assets/"
+  echo "✓ Multi-round prompt installed (agent will use process/ and backlog; no task file required)"
+else
+  echo "   ⚠️  Multi-round prompt asset not found in repo assets."
+fi
 
 # Initialize .ralph state
 echo "📁 Initializing .ralph/ state..."
@@ -138,50 +149,8 @@ EOF
 echo "0" > "$TARGET/.ralph/.iteration"
 echo "✓ .ralph/ initialized"
 
-# Optional: RALPH_TASK.md template
-if [[ ! -f "$TARGET/RALPH_TASK.md" ]]; then
-  echo "📝 Creating RALPH_TASK.md template..."
-  cat > "$TARGET/RALPH_TASK.md" <<'TASKEOF'
----
-task: Build a CLI todo app in TypeScript
-test_command: "npx ts-node todo.ts list"
----
-
-# Task: CLI Todo App (TypeScript)
-
-Build a simple command-line todo application in TypeScript.
-
-## Requirements
-
-1. Single file: `todo.ts`
-2. Uses `todos.json` for persistence
-3. Three commands: add, list, done
-4. TypeScript with proper types
-
-## Success Criteria
-
-1. [ ] `npx ts-node todo.ts add "Buy milk"` adds a todo and confirms
-2. [ ] `npx ts-node todo.ts list` shows all todos with IDs and status
-3. [ ] `npx ts-node todo.ts done 1` marks todo 1 as complete
-4. [ ] Todos survive script restart (JSON persistence)
-5. [ ] Invalid commands show helpful usage message
-6. [ ] Code has proper TypeScript types (no `any`)
-
----
-
-## Ralph Instructions
-
-1. Work on the next incomplete criterion (marked [ ])
-2. Check off completed criteria (change [ ] to [x])
-3. Run tests after changes
-4. Commit your changes frequently
-5. When ALL criteria are [x], output: `<ralph>COMPLETE</ralph>`
-6. If stuck on the same issue 3+ times, output: `<ralph>GUTTER</ralph>`
-TASKEOF
-  echo "✓ Created RALPH_TASK.md with example task"
-else
-  echo "✓ RALPH_TASK.md already exists (not overwritten)"
-fi
+# No task file is created by default; agent follows the multi-round prompt (process/ and backlog).
+# A task file can be added for legacy mode if desired.
 
 # Update .gitignore
 if [[ -f "$TARGET/.gitignore" ]]; then
@@ -204,15 +173,14 @@ echo "════════════════════════�
 echo "✅ Ralph enabled! You can run the loop from: $TARGET"
 echo "═══════════════════════════════════════════════════════════════════"
 echo ""
-echo "  📁 .cursor/ralph-scripts/   – Ralph scripts"
+echo "  📁 .cursor/ralph-scripts/   – Ralph scripts + multi-round prompt"
 echo "  📁 .ralph/                 – State (guardrails, progress, logs)"
-echo "  📄 RALPH_TASK.md           – Define your task and criteria"
 echo ""
 echo "Next steps:"
-echo "  1. Edit RALPH_TASK.md with your task and criteria"
-echo "  2. Run: $TARGET/.cursor/ralph-scripts/ralph-setup.sh"
+echo "  1. Run: $TARGET/.cursor/ralph-scripts/ralph-setup.sh"
 echo "     or:  cd $TARGET && ./.cursor/ralph-scripts/ralph-setup.sh"
 echo ""
-echo "  Single iteration first:  ./.cursor/ralph-scripts/ralph-once.sh"
-echo "  Monitor:                 tail -f .ralph/activity.log"
+echo "  The agent follows the multi-round process (process/, product-opportunities)."
+echo "  Single iteration:  ./.cursor/ralph-scripts/ralph-once.sh"
+echo "  Monitor:           tail -f .ralph/activity.log"
 echo ""

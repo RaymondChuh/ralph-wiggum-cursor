@@ -25,9 +25,8 @@
 #   -h, --help             Show this help
 #
 # Requirements:
-#   - RALPH_TASK.md in the project root
-#   - Git repository
-#   - cursor-agent CLI installed
+#   - Git repository and cursor-agent CLI
+#   - Either a task file (legacy) or the multi-round prompt installed (e.g. via ralphify; no task file needed)
 
 set -euo pipefail
 
@@ -153,12 +152,16 @@ main() {
   fi
   
   local task_file="$WORKSPACE/RALPH_TASK.md"
-  
+  local multi_round_file
+  multi_round_file=$(get_multi_round_file "$SCRIPT_DIR")
+  local multi_round_mode=false
+  [[ -n "$multi_round_file" ]] && multi_round_mode=true
+
   # Show banner
   show_banner
-  
-  # Check prerequisites
-  if ! check_prerequisites "$WORKSPACE"; then
+
+  # Check prerequisites (task file optional when multi-round prompt exists)
+  if ! check_prerequisites "$WORKSPACE" "$SCRIPT_DIR"; then
     exit 1
   fi
   
@@ -173,24 +176,39 @@ main() {
   init_ralph_dir "$WORKSPACE"
   
   echo "Workspace: $WORKSPACE"
-  echo "Task:      $task_file"
+  if [[ "$multi_round_mode" == true ]]; then
+    echo "Mode:      Multi-round (process/ and backlog; no task file required)"
+  else
+    echo "Task:      $task_file"
+  fi
   echo ""
-  
-  # Show task summary
-  echo "📋 Task Summary:"
-  echo "─────────────────────────────────────────────────────────────────"
-  head -30 "$task_file"
-  echo "─────────────────────────────────────────────────────────────────"
-  echo ""
-  
-  # Count criteria
-  local total_criteria done_criteria remaining
-  # Only count actual checkbox list items (- [ ], * [x], 1. [ ], etc.)
-  total_criteria=$(grep -cE '^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+\[(x| )\]' "$task_file" 2>/dev/null) || total_criteria=0
-  done_criteria=$(grep -cE '^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+\[x\]' "$task_file" 2>/dev/null) || done_criteria=0
-  remaining=$((total_criteria - done_criteria))
-  
-  echo "Progress: $done_criteria / $total_criteria criteria complete ($remaining remaining)"
+
+  if [[ "$multi_round_mode" == true ]]; then
+    echo "📋 Multi-round execution: agent will use process/ (ideation, design, PIR) and product-opportunities.md for tracking."
+    echo "─────────────────────────────────────────────────────────────────"
+    echo ""
+  else
+    # Show task summary and criteria (legacy)
+    echo "📋 Task Summary:"
+    echo "─────────────────────────────────────────────────────────────────"
+    head -30 "$task_file"
+    echo "─────────────────────────────────────────────────────────────────"
+    echo ""
+
+    local total_criteria done_criteria remaining
+    total_criteria=$(grep -cE '^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+\[(x| )\]' "$task_file" 2>/dev/null) || total_criteria=0
+    done_criteria=$(grep -cE '^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+\[x\]' "$task_file" 2>/dev/null) || done_criteria=0
+    remaining=$((total_criteria - done_criteria))
+
+    echo "Progress: $done_criteria / $total_criteria criteria complete ($remaining remaining)"
+
+    if [[ "$remaining" -eq 0 ]] && [[ "$total_criteria" -gt 0 ]]; then
+      echo "🎉 Task already complete! All criteria are checked."
+      exit 0
+    fi
+    echo ""
+  fi
+
   echo "Model:    $MODEL"
   echo "Max iter: $MAX_ITERATIONS"
   [[ -n "$USE_BRANCH" ]] && echo "Branch:   $USE_BRANCH"
@@ -198,11 +216,6 @@ main() {
   [[ "$PARALLEL_MODE" == "true" ]] && echo "Parallel: Yes ($MAX_PARALLEL agents)"
   [[ "$SKIP_MERGE" == "true" ]] && echo "Merge:    Skipped"
   echo ""
-  
-  if [[ "$remaining" -eq 0 ]] && [[ "$total_criteria" -gt 0 ]]; then
-    echo "🎉 Task already complete! All criteria are checked."
-    exit 0
-  fi
   
   # Confirm before starting (unless -y flag)
   if [[ "$SKIP_CONFIRM" != "true" ]]; then

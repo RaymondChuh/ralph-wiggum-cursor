@@ -107,38 +107,47 @@ main() {
   echo "═══════════════════════════════════════════════════════════════════"
   echo ""
   
-  # Check prerequisites
-  if ! check_prerequisites "$WORKSPACE"; then
+  # Check prerequisites (pass SCRIPT_DIR so multi-round prompt under .cursor/ralph-scripts/assets is found)
+  if ! check_prerequisites "$WORKSPACE" "$SCRIPT_DIR"; then
     exit 1
   fi
   
   # Initialize .ralph directory
   init_ralph_dir "$WORKSPACE"
+
+  local multi_round_file
+  multi_round_file=$(get_multi_round_file "$SCRIPT_DIR")
+  local multi_round_mode=false
+  [[ -n "$multi_round_file" ]] && multi_round_mode=true
   
   echo "Workspace: $WORKSPACE"
   echo "Model:     $MODEL"
   echo ""
   
-  # Show task summary
-  echo "📋 Task Summary:"
-  echo "─────────────────────────────────────────────────────────────────"
-  head -30 "$task_file"
-  echo "─────────────────────────────────────────────────────────────────"
-  echo ""
-  
-  # Count criteria
-  local total_criteria done_criteria remaining
-  # Only count actual checkbox list items (- [ ], * [x], 1. [ ], etc.)
-  total_criteria=$(grep -cE '^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+\[(x| )\]' "$task_file" 2>/dev/null) || total_criteria=0
-  done_criteria=$(grep -cE '^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+\[x\]' "$task_file" 2>/dev/null) || done_criteria=0
-  remaining=$((total_criteria - done_criteria))
-  
-  echo "Progress: $done_criteria / $total_criteria criteria complete ($remaining remaining)"
-  echo ""
-  
-  if [[ "$remaining" -eq 0 ]] && [[ "$total_criteria" -gt 0 ]]; then
-    echo "🎉 Task already complete! All criteria are checked."
-    exit 0
+  if [[ "$multi_round_mode" == true ]]; then
+    echo "📋 Multi-round execution (process/ and backlog)"
+    echo "─────────────────────────────────────────────────────────────────"
+    echo ""
+  else
+    # Show task summary (legacy)
+    echo "📋 Task Summary:"
+    echo "─────────────────────────────────────────────────────────────────"
+    head -30 "$task_file"
+    echo "─────────────────────────────────────────────────────────────────"
+    echo ""
+
+    local total_criteria done_criteria remaining
+    total_criteria=$(grep -cE '^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+\[(x| )\]' "$task_file" 2>/dev/null) || total_criteria=0
+    done_criteria=$(grep -cE '^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+\[x\]' "$task_file" 2>/dev/null) || done_criteria=0
+    remaining=$((total_criteria - done_criteria))
+
+    echo "Progress: $done_criteria / $total_criteria criteria complete ($remaining remaining)"
+    echo ""
+
+    if [[ "$remaining" -eq 0 ]] && [[ "$total_criteria" -gt 0 ]]; then
+      echo "🎉 Task already complete! All criteria are checked."
+      exit 0
+    fi
   fi
   
   # Confirm
