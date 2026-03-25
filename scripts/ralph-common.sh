@@ -567,7 +567,7 @@ run_iteration() {
   # Start parser in background, reading from cursor-agent
   # Parser outputs to fifo, we read signals from fifo
   (
-    "${cmd_args[@]}" "$prompt" 2>&1 | "$script_dir/stream-parser.sh" "$workspace" > "$fifo"
+    "${cmd_args[@]}" "$prompt" 2>&1 | "$script_dir/stream-parser.sh" "$workspace" "$iteration" > "$fifo"
   ) &
   local agent_pid=$!
   

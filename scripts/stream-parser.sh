@@ -5,7 +5,7 @@
 # Tracks token usage, detects failures/gutter, writes to .ralph/ logs.
 #
 # Usage:
-#   cursor-agent -p --force --output-format stream-json "..." | ./stream-parser.sh /path/to/workspace
+#   cursor-agent -p --force --output-format stream-json "..." | ./stream-parser.sh /path/to/workspace [iteration]
 #
 # Outputs to stdout:
 #   - ROTATE when threshold hit (80k tokens)
@@ -20,6 +20,7 @@
 set -euo pipefail
 
 WORKSPACE="${1:-.}"
+ITERATION="${2:-}"
 RALPH_DIR="$WORKSPACE/.ralph"
 
 # Ensure .ralph directory exists
@@ -334,11 +335,20 @@ process_line() {
 
 # Main loop: read JSON lines from stdin
 main() {
-  # Initialize activity log for this session
+  # Initialize activity log for this session/iteration
   echo "" >> "$RALPH_DIR/activity.log"
-  echo "═══════════════════════════════════════════════════════════════" >> "$RALPH_DIR/activity.log"
-  echo "Ralph Session Started: $(date)" >> "$RALPH_DIR/activity.log"
-  echo "═══════════════════════════════════════════════════════════════" >> "$RALPH_DIR/activity.log"
+  
+  if [[ -n "$ITERATION" ]]; then
+    # Iteration divider (single-line chars, distinct from session divider)
+    echo "───────────────────────────────────────────────────────────────" >> "$RALPH_DIR/activity.log"
+    echo "📍 Iteration $ITERATION Started: $(date)" >> "$RALPH_DIR/activity.log"
+    echo "───────────────────────────────────────────────────────────────" >> "$RALPH_DIR/activity.log"
+  else
+    # Session divider (double-line chars, used when iteration not specified)
+    echo "═══════════════════════════════════════════════════════════════" >> "$RALPH_DIR/activity.log"
+    echo "Ralph Session Started: $(date)" >> "$RALPH_DIR/activity.log"
+    echo "═══════════════════════════════════════════════════════════════" >> "$RALPH_DIR/activity.log"
+  fi
   
   # Track last token log time
   local last_token_log=$(date +%s)
