@@ -80,6 +80,24 @@ else
   echo "   ⚠️  Multi-round prompt asset not found in repo assets."
 fi
 
+# Agent Skills (multi-round roles): copy to .agent/skills/, symlink for Cursor
+SKILLS_SRC="$REPO_ROOT/skills"
+if [[ -d "$SKILLS_SRC" ]]; then
+  mkdir -p "$TARGET/.agent"
+  rm -rf "$TARGET/.agent/skills"
+  mkdir -p "$TARGET/.agent/skills"
+  for skill_dir in "$SKILLS_SRC"/*; do
+    if [[ -d "$skill_dir" ]] && [[ -f "$skill_dir/SKILL.md" ]]; then
+      cp -R "$skill_dir" "$TARGET/.agent/skills/"
+    fi
+  done
+  rm -rf "$TARGET/.cursor/skills"
+  ln -sfn "$TARGET/.agent/skills" "$TARGET/.cursor/skills"
+  echo "✓ Multi-round role skills → $TARGET/.agent/skills/ (symlink .cursor/skills → .agent/skills)"
+else
+  echo "   ⚠️  skills/ not found in repo; skipping Agent Skills install."
+fi
+
 # Initialize .ralph state
 echo "📁 Initializing .ralph/ state..."
 cat > "$TARGET/.ralph/guardrails.md" << 'EOF'
@@ -174,6 +192,8 @@ echo "✅ Ralph enabled! You can run the loop from: $TARGET"
 echo "═══════════════════════════════════════════════════════════════════"
 echo ""
 echo "  📁 .cursor/ralph-scripts/   – Ralph scripts + multi-round prompt"
+echo "  📁 .agent/skills/          – Multi-round role skills (SKILL.md per role)"
+echo "  📁 .cursor/skills/         – Symlink → .agent/skills/ (Cursor Agent Skills)"
 echo "  📁 .ralph/                 – State (guardrails, progress, logs)"
 echo ""
 echo "Next steps:"
