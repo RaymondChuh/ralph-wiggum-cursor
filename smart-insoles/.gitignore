@@ -1,0 +1,29 @@
+# Personal recordings: never commit (also enforced by .claude/hooks/guard.py)
+data/raw/*
+!data/raw/README.md
+# Third-party dataset cache
+data/public/*
+!data/public/README.md
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.ipynb_checkpoints/
+
+# Docs build output
+site/
+
+# Firmware / web build output
+.pio/
+build/
+node_modules/
+dist/
+
+# Local Claude Code settings
+.claude/settings.local.json
+
+# Autopilot logs
+logs/

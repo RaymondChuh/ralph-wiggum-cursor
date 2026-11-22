@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "project": "Smart insoles for running gait analysis",
+  "phases": [
+    {
+      "id": "P1",
+      "key": "research",
+      "name": "Research & source discovery",
+      "lead": "research-scout",
+      "exit_gate": "G1"
+    },
+    {
+      "id": "P2",
+      "key": "synthesis",
+      "name": "Literature synthesis & primers",
+      "lead": "literature-analyst",
+      "exit_gate": null
+    },
+    {
+      "id": "P3",
+      "key": "ideation",
+      "name": "Product ideation & requirements",
+      "lead": "product-ideator",
+      "exit_gate": "G2"
+    },
+    {
+      "id": "P4",
+      "key": "design",
+      "name": "Prototype design (stack, circuit, BOM, validation plan)",
+      "lead": "hardware-engineer",
+      "exit_gate": "G3"
+    },
+    {
+      "id": "P5",
+      "key": "build",
+      "name": "Build: firmware, software, hardware assembly",
+      "lead": "firmware-engineer",
+      "exit_gate": null
+    },
+    {
+      "id": "P6",
+      "key": "validation",
+      "name": "Validation against reference measurements",
+      "lead": "gait-scientist",
+      "exit_gate": "G4"
+    },
+    {
+      "id": "P7",
+      "key": "custom",
+      "name": "Stage 2: custom hardware (PCB, flexible sensor, enclosure)",
+      "lead": "hardware-engineer",
+      "exit_gate": null,
+      "requires": { "gate": "G4", "option": "custom" }
+    }
+  ],
+  "gates": [
+    {
+      "id": "G1",
+      "name": "Source shortlist",
+      "phase": "P1",
+      "question": "Which open-source project(s), papers and datasets do we build on?",
+      "required_options": []
+    },
+    {
+      "id": "G2",
+      "name": "Concept & requirements",
+      "phase": "P3",
+      "question": "Which product concept do we build, and are its requirements right?",
+      "required_options": []
+    },
+    {
+      "id": "G3",
+      "name": "Design freeze: stack, BOM tier, purchase",
+      "phase": "P4",
+      "question": "Which microcontroller/firmware stack and which BOM tier (budget/standard/premium)? Approving this authorises the human to buy the parts list.",
+      "required_options": []
+    },
+    {
+      "id": "G4",
+      "name": "Stage-1 review: go custom?",
+      "phase": "P6",
+      "question": "Given validation results, do we go to custom hardware (custom), iterate the dev-board prototype (iterate), or wrap up (finish)?",
+      "required_options": ["custom", "iterate", "finish"]
+    },
+    {
+      "id": "G5",
+      "name": "Custom hardware fabrication order",
+      "phase": "P7",
+      "question": "Is the custom PCB / sensor design ready to send to fabrication at the quoted cost?",
+      "required_options": []
+    }
+  ]
+}

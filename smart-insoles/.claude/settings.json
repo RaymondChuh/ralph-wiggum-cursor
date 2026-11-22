@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(python3 scripts/harness.py *)",
+      "Bash(python3 scripts/lit_search.py *)",
+      "Bash(python3 -m unittest *)",
+      "Bash(python3 -m pytest *)",
+      "Bash(pytest *)",
+      "Bash(bash scripts/smoke_test.sh *)",
+      "Bash(bash scripts/smoke_test.sh)",
+      "Bash(mkdocs build *)",
+      "Bash(mkdocs build)",
+      "Bash(git status *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git diff)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git restore --staged *)",
+      "Bash(pio run)",
+      "Bash(pio run -e *)",
+      "Bash(pio test *)",
+      "Bash(pio check *)",
+      "Bash(pio device list *)",
+      "Bash(pio device list)",
+      "Bash(npm test *)",
+      "Bash(npm run build *)",
+      "Bash(npm run test *)",
+      "Bash(npm run lint *)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:export.arxiv.org)",
+      "WebFetch(domain:doi.org)",
+      "WebFetch(domain:pubmed.ncbi.nlm.nih.gov)",
+      "WebFetch(domain:pmc.ncbi.nlm.nih.gov)",
+      "WebFetch(domain:www.ncbi.nlm.nih.gov)",
+      "WebFetch(domain:api.openalex.org)",
+      "WebFetch(domain:www.semanticscholar.org)",
+      "WebFetch(domain:www.mdpi.com)",
+      "WebFetch(domain:physionet.org)",
+      "WebFetch(domain:hackaday.io)",
+      "WebFetch(domain:www.tga.gov.au)",
+      "WebFetch(domain:www.fda.gov)",
+      "WebFetch(domain:core-electronics.com.au)",
+      "WebFetch(domain:www.jaycar.com.au)",
+      "WebFetch(domain:au.element14.com)",
+      "WebFetch(domain:www.digikey.com.au)",
+      "WebFetch(domain:au.mouser.com)",
+      "WebFetch(domain:docs.platformio.org)",
+      "WebFetch(domain:docs.wokwi.com)",
+      "WebFetch(domain:docs.zephyrproject.org)",
+      "WebFetch(domain:docs.espressif.com)"
+    ],
+    "ask": [
+      "Bash(pio run *upload*)",
+      "Bash(pio run *-t upload*)",
+      "Bash(*esptool*)",
+      "Bash(west flash *)",
+      "Bash(west flash)",
+      "Bash(nrfjprog *)",
+      "Bash(arduino-cli upload *)",
+      "Bash(idf.py *flash*)",
+      "Bash(git push *)"
+    ],
+    "deny": [
+      "Edit(state/gates/decisions.jsonl)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_start.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/record_human_decision.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

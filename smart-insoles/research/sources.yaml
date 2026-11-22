@@ -1,0 +1,6 @@
+# Source registry for the smart-insole project.
+# Schema and scoring rubric: .claude/skills/source-evaluation/SKILL.md
+# Every entry must be verified (URL opened by an agent) before it is added.
+# status: candidate | shortlisted | approved | rejected | reference
+# type:   repo | paper | dataset | product | standard | web | book
+sources: []
